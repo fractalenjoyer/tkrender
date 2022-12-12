@@ -1,1 +1,2 @@
-cargo build --release && mv .\target\release\tkmandel.dll .\python\tkmandel.pyd
+cargo build --release
+Copy-Item .\target\release\tkmandel.dll -Destination .\python\tkmandel.pyd

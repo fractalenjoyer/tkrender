@@ -1,11 +1,10 @@
-from tkmandel import Engine
+import tkmandel as rd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-from time import sleep
 
 
-cube = [
+cube_points = [
     [-1, -1, -1],
     [-1, -1, 1],
     [-1, 1, -1],
@@ -16,17 +15,25 @@ cube = [
     [1, 1, 1]
 ]
 
-test = Engine(cube)
-view = test.get_view()
-x, y = zip(*view)
+focal = 1
+origin = [0, 0, -2]
+
+cube = rd.Shape(cube_points)
+# cube2 = rd.Shape(cube_points)
+engine = rd.Engine([cube])
+x, y = zip(*engine.get_view(focal, origin))
 fig, ax = plt.subplots()
 
 scat = ax.scatter(x, y)
 ax.axis([-2, 2, -2, 2])
 angle = 2*np.pi/360
+
+
+
 def animate(_):
-    test.rotate_y(angle)
-    view = test.get_view()
+    cube.rotate_in_place(angle, angle, 0)
+    # cube2.rotate_in_place(-angle, 0, 0)
+    view = engine.get_view(focal, origin)
     scat.set_offsets(view)
     
 

@@ -25,4 +25,5 @@ fn main() {
                 "m.add_class::<{}>()?;\n", &s[1]))
             .collect::<String>()
         + "Ok(())}").unwrap();
+    println!("cargo:rerun-if-changed=build.rs");
 }

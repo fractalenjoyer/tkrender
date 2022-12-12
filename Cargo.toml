@@ -12,6 +12,7 @@ crate-type = ["cdylib"]
 [dependencies]
 pyo3 = { version = "0.17.3", features = ["extension-module"] }
 ndarray = "*"
+rayon = "1.6.1"
 
 [build-dependencies]
 regex = "*"
