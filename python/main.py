@@ -1,16 +1,34 @@
-import tkmandel
-from timeit import timeit
-print(tkmandel.add2(3, 4))
-print(tkmandel.add3(3, 4, 5))
-test = tkmandel.Bahd(5)
-print(test)
-print(test.square())
+from tkmandel import Engine
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+from time import sleep
 
-def fib(n):
-    if n <= 2:
-        return n
-    return fib(n-1) + fib(n-2)
 
-for i in range(1, 40):
-    print("Pyth: ", i , timeit(lambda: fib(i), number=5))
-    print("Rust: ", i , timeit(lambda: tkmandel.fib(i), number=5))
+cube = [
+    [-1, -1, -1],
+    [-1, -1, 1],
+    [-1, 1, -1],
+    [-1, 1, 1],
+    [1, -1, -1],
+    [1, -1, 1],
+    [1, 1, -1],
+    [1, 1, 1]
+]
+
+test = Engine(cube)
+view = test.get_view()
+x, y = zip(*view)
+fig, ax = plt.subplots()
+
+scat = ax.scatter(x, y)
+ax.axis([-2, 2, -2, 2])
+angle = 2*np.pi/360
+def animate(_):
+    test.rotate_y(angle)
+    view = test.get_view()
+    scat.set_offsets(view)
+    
+
+ani = animation.FuncAnimation(fig, animate, interval=1)
+plt.show()
