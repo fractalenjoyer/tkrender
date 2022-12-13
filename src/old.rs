@@ -79,3 +79,17 @@ impl Engine {
         Ok(())
     }
 }
+
+// let rotation_matrix = arr2(&[
+        //     [
+        //         cos_y * cos_z,
+        //         -cos_x * sin_z + sin_x * sin_y * cos_z,
+        //         sin_x * sin_z + cos_x * sin_y * cos_z,
+        //     ],
+        //     [
+        //         cos_y * sin_z,
+        //         cos_x * cos_z + sin_x * sin_y * sin_z,
+        //         -sin_x * cos_z + cos_x * sin_y * sin_z,
+        //     ],
+        //     [-sin_y, sin_x * cos_y, cos_x * cos_y],
+        // ]);
