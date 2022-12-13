@@ -2,7 +2,6 @@ use pyo3::prelude::*;
 include!(concat!(env!("OUT_DIR"), "/module.rs"));
 use ndarray::arr2;
 use rayon::prelude::*;
-use std::fs;
 
 #[pyclass]
 struct Shape {
@@ -14,7 +13,7 @@ struct Shape {
 impl Shape {
     #[new]
     fn new(path: String) -> Self {
-        let contents = fs::read_to_string(path).unwrap();
+        let contents = std::fs::read_to_string(path).unwrap();
         let mut points = Vec::new();
         let mut faces = Vec::new();
         for line in contents.lines() {

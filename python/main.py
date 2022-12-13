@@ -36,11 +36,11 @@ def rotate(event):
 focal = [0, 0, -15]
 origin = [0, 0, -15]
 width = height = 1000
-range = 15
+range = 20
 
 root = Tk()
 mouse = Mouse()
-object = Shape("./objects/teapot.obj")
+object = Shape("./objects/gun.obj")
 ctx = Canvas(root, width=width, height=width, bg="#131415")
     
 ctx.bind("<B1-Motion>", rotate)
