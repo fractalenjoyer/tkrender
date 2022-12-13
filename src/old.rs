@@ -80,7 +80,14 @@ impl Engine {
     }
 }
 
-// let rotation_matrix = arr2(&[
+// let cos_x = angle_x.cos();
+        // let sin_x = angle_x.sin();
+        // let cos_y = angle_y.cos();
+        // let sin_y = angle_y.sin();
+        // let cos_z = angle_z.cos();
+        // let sin_z = angle_z.sin();
+
+        // let rotation_matrix = arr2(&[
         //     [
         //         cos_y * cos_z,
         //         -cos_x * sin_z + sin_x * sin_y * cos_z,
@@ -93,3 +100,44 @@ impl Engine {
         //     ],
         //     [-sin_y, sin_x * cos_y, cos_x * cos_y],
         // ]);
+
+
+
+
+        // fn get_view_deprecated(&self, focal: f64, origin: Vec<f64>) -> PyResult<Vec<Vec<f64>>> {
+        //     let camera = arr2(&[[focal, 0.0, 0.0], [0.0, focal, 0.0], [0.0, 0.0, 1.0]]);
+        //     Ok(self
+        //         .points
+        //         .par_iter()
+        //         .map(|point_vec| {
+        //             let point = arr2(&[
+        //                 [point_vec[0] - origin[0]],
+        //                 [point_vec[1] - origin[1]],
+        //                 [point_vec[2] - origin[2]],
+        //             ]);
+        //             let view = camera.dot(&point).into_raw_vec();
+        //             vec![view[0], view[1]]
+        //         })
+        //         .collect::<Vec<Vec<f64>>>())
+        // }
+
+
+        // for line in contents.lines() {
+        //     let mut line_iter = line.split_whitespace();
+        //     match line_iter.next() {
+        //         Some("v") => {
+        //             let x = line_iter.next().unwrap().parse::<f64>().unwrap();
+        //             let y = line_iter.next().unwrap().parse::<f64>().unwrap();
+        //             let z = line_iter.next().unwrap().parse::<f64>().unwrap();
+        //             points.push(vec![x, y, z]);
+        //         }
+        //         Some("f") => {
+        //             let a = line_iter.next().unwrap().parse::<usize>().unwrap() - 1;
+        //             let b = line_iter.next().unwrap().parse::<usize>().unwrap() - 1;
+        //             let c = line_iter.next().unwrap().parse::<usize>().unwrap() - 1;
+        //             faces.push(vec![a, b, c]);
+        //         }
+        //         _ => {}
+        //     }
+        // }
+        // Self { points, faces }

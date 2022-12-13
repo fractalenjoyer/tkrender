@@ -2,22 +2,55 @@ use pyo3::prelude::*;
 include!(concat!(env!("OUT_DIR"), "/module.rs"));
 use ndarray::arr2;
 use rayon::prelude::*;
+use std::fs;
 
 #[pyclass]
 struct Shape {
     points: Vec<Vec<f64>>,
+    faces: Vec<Vec<usize>>,
 }
 
 #[pymethods]
 impl Shape {
     #[new]
-    fn new(points: Vec<Vec<f64>>) -> Self {
-        Self { points }
+    fn new(path: String) -> Self {
+        let contents = fs::read_to_string(path).unwrap();
+        let mut points = Vec::new();
+        let mut faces = Vec::new();
+        for line in contents.lines() {
+            let mut line_iter = line.split_whitespace();
+            match line_iter.next() {
+                Some("v") => {
+                    let items = line_iter.collect::<Vec<&str>>();
+                    let x = items[0].parse::<f64>().unwrap();
+                    let y = items[1].parse::<f64>().unwrap();
+                    let z = items[2].parse::<f64>().unwrap();
+                    points.push(vec![x, y, z]);
+                }
+                Some("f") => {
+                    // TODO: Support more than 3 vertices per face
+                    let items = line_iter
+                        .map(|item| item.split("/").next().unwrap())
+                        .collect::<Vec<&str>>();
+                    let a = items[0].parse::<usize>().unwrap() - 1;
+                    let b = items[1].parse::<usize>().unwrap() - 1;
+                    let c = items[2].parse::<usize>().unwrap() - 1;
+                    faces.push(vec![a, b, c]);
+                }
+                _ => {}
+            }
+        }
+        Self { points, faces }
+    }
+
+    #[staticmethod]
+    fn load_points(points: Vec<Vec<f64>>, faces: Vec<Vec<usize>>) -> Self {
+        Self { points, faces }
     }
 
     fn rotate(&self, angle_x: f64, angle_y: f64, angle_z: f64) -> PyResult<Vec<Vec<f64>>> {
         let mut rotation_matrix = arr2(&[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]);
-        
+
         if angle_x != 0.0 {
             let cos_x = angle_x.cos();
             let sin_x = angle_x.sin();
@@ -62,22 +95,47 @@ impl Shape {
         Ok(())
     }
 
-    fn get_points(&self) -> PyResult<Vec<Vec<f64>>> {
-        Ok(self.points.clone())
-    }
-
-    fn get_view(&self, focal: f64, origin: Vec<f64>) -> PyResult<Vec<Vec<f64>>> {
-        let camera = arr2(&[[focal, 0.0, 0.0], [0.0, focal, 0.0], [0.0, 0.0, 1.0]]);
-        let origin = arr2(&[[origin[0]], [origin[1]], [origin[2]]]);
+    fn get_view(
+        &self,
+        origin: Vec<f64>,
+        orientation: Vec<f64>,
+        focal: Vec<f64>,
+    ) -> PyResult<Vec<Vec<f64>>> {
+        let sx = orientation[0].sin();
+        let cx = orientation[0].cos();
+        let sy = orientation[1].sin();
+        let cy = orientation[1].cos();
+        let sz = orientation[2].sin();
+        let cz = orientation[2].cos();
+        let ex = focal[0];
+        let ey = focal[1];
+        let ez = focal[2];
         Ok(self
             .points
             .par_iter()
-            .map(|point_vec| {
-                let point = arr2(&[[point_vec[0]], [point_vec[1]], [point_vec[2]]]) - &origin;
-                let view = camera.dot(&point).into_raw_vec();
-                vec![view[0], view[1]]
+            .map(|point| {
+                let x = point[0] - origin[0];
+                let y = point[1] - origin[1];
+                let z = point[2] - origin[2];
+                let dx = cy * (sz * y + cz * x) - sy * z;
+                let dy = sx * (cy * z + sy * (sz * y + cz * x)) + cx * (cz * y - sz * x);
+                let dz = cx * (cy * z + sy * (sz * y + cz * x)) - sx * (cz * y - sz * x);
+                vec![ez * dx / dz + ex, ez * dy / dz + ey]
             })
             .collect::<Vec<Vec<f64>>>())
+    }
+
+    fn get_poly(&self, focal: Vec<f64>, origin: Vec<f64>) -> PyResult<Vec<Vec<Vec<f64>>>> {
+        let view = self.get_view(origin, vec![0.0, 0.0, 0.0], focal);
+        Ok(self
+            .faces
+            .par_iter()
+            .map(|face| {
+                face.par_iter()
+                    .map(|index| view.as_ref().unwrap()[*index].clone())
+                    .collect::<Vec<Vec<f64>>>()
+            })
+            .collect::<Vec<Vec<Vec<f64>>>>())
     }
 }
 
@@ -92,12 +150,41 @@ impl Engine {
     fn new(shapes: Vec<Py<Shape>>) -> Self {
         Self { shapes }
     }
-    
-    fn get_view(&self, py: Python<'_>, focal: f64, origin: Vec<f64>) -> PyResult<Vec<Vec<f64>>> {
+
+    fn get_view(
+        &self,
+        py: Python<'_>,
+        focal: Vec<f64>,
+        origin: Vec<f64>,
+    ) -> PyResult<Vec<Vec<f64>>> {
         Ok(self
             .shapes
             .iter()
-            .map(|shape| shape.borrow(py).get_view(focal, origin.clone()).unwrap())
+            .map(|shape| {
+                shape
+                    .borrow(py)
+                    .get_view(origin.clone(), vec![0.0, 0.0, 0.0], focal.clone())
+                    .unwrap()
+            })
+            .reduce(|a, b| [a, b].concat())
+            .unwrap())
+    }
+
+    fn get_poly(
+        &self,
+        py: Python<'_>,
+        focal: Vec<f64>,
+        origin: Vec<f64>,
+    ) -> PyResult<Vec<Vec<Vec<f64>>>> {
+        Ok(self
+            .shapes
+            .iter()
+            .map(|shape| {
+                shape
+                    .borrow(py)
+                    .get_poly(focal.clone(), origin.clone())
+                    .unwrap()
+            })
             .reduce(|a, b| [a, b].concat())
             .unwrap())
     }
