@@ -1,12 +1,12 @@
 [package]
-name = "tkmandel"
+name = "tktp"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-name = "tkmandel"
+name = "tktp"
 crate-type = ["cdylib"]
 
 [dependencies]

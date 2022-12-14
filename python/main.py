@@ -1,5 +1,5 @@
-from tkinter import * 
-from tkmandel import Shape
+import tkinter as tk 
+from tktp import Shape #type: ignore
 import numpy as np
 
 
@@ -33,18 +33,41 @@ def rotate(event):
     object.rotate_in_place(-delta_y/100, delta_x/100, 0)
     main()
 
+def move(event):
+    global origin
+    print(event.keysym)
+    match event.keysym:
+        case "w":
+            origin[1] += 1
+        case "s":
+            origin[1] -= 1
+        case "a":
+            origin[0] += 1
+        case "d":
+            origin[0] -= 1
+        case _: 
+            return
+    main()
+
+def zoom(event):
+    global origin
+    origin[2] += int(event.delta/120)
+    main()
+
 focal = [0, 0, -15]
 origin = [0, 0, -15]
-width = height = 1000
 range = 20
+width = height = 600
 
-root = Tk()
+root = tk.Tk()
 mouse = Mouse()
-object = Shape("./objects/gun.obj")
-ctx = Canvas(root, width=width, height=width, bg="#131415")
+object = Shape("./objects/bulba.obj")
+ctx = tk.Canvas(root, width=width, height=width, bg="#131415")
     
 ctx.bind("<B1-Motion>", rotate)
 ctx.bind("<Button-1>", mouse.reset)
+root.bind("<Key>", move)
+root.bind("<MouseWheel>", zoom)
 
 ctx.pack()
 main()

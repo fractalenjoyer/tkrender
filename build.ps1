@@ -1,2 +1,2 @@
 cargo build --release
-Copy-Item .\target\release\tkmandel.dll -Destination .\python\tkmandel.pyd
+Copy-Item .\target\release\tktp.dll -Destination .\python\tktp.pyd

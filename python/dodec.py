@@ -1,4 +1,4 @@
-import tkmandel as rd
+import tktp as rd #type: ignore
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
