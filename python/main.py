@@ -1,16 +1,21 @@
 import tkinter as tk 
 from tkrender import Shape #type: ignore
 import numpy as np
-
+from timeit import timeit
+import matplotlib.cm as cm
 
 def project(x, y, width, height, range):
     return width*(x + range/2)/range, height*(y + range/2)/range
 
+
+
 def main():
     ctx.delete("all")
-    for poly in object.get_poly(focal, origin):
+    cmap = cm.get_cmap("inferno")
+    for poly, normal in object.get_culled(focal, origin):
+        color = cmap(abs(np.dot(normal, [0, 0, 1])))
         polygon = [*map(lambda x: project(x[0], x[1], width, height, range), poly)]
-        ctx.create_polygon(polygon, fill="", outline="white")    
+        ctx.create_polygon(polygon, fill=format(f"#{int(255*color[0]):02x}{int(255*color[1]):02x}{int(255*color[2]):02x}"), outline="")    
 
 class Mouse:
     def __init__(self):
@@ -35,7 +40,6 @@ def rotate(event):
 
 def move(event):
     global origin
-    print(event.keysym)
     match event.keysym:
         case "w":
             origin[1] += 1
@@ -57,11 +61,11 @@ def zoom(event):
 focal = [0, 0, -15]
 origin = [0, 0, -15]
 range = 20
-width = height = 600
+width = height = 1000
 
 root = tk.Tk()
 mouse = Mouse()
-object = Shape("./objects/bulba.obj")
+object = Shape("./objects/teapot.obj")
 ctx = tk.Canvas(root, width=width, height=width, bg="#131415")
     
 ctx.bind("<B1-Motion>", rotate)

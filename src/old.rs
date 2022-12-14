@@ -141,3 +141,43 @@ impl Engine {
         //     }
         // }
         // Self { points, faces }
+
+        // fn culling(&self) {
+        //     let mut normals = self.get_normals().unwrap();
+        //     let mut faces = self.faces.clone();
+        //     let mut points = self.points.clone();
+        //     let mut new_points = Vec::new();
+        //     let mut new_faces = Vec::new();
+        //     let mut new_normals = Vec::new();
+        //     let mut new_indexes = Vec::new();
+        //     // adds the faces that are facing the camera
+        //     for i in 0..normals.len() {
+        //         if normals[i][2] > 0.0 {
+        //             new_faces.push(faces[i].clone());
+        //             new_normals.push(normals[i].clone());
+        //         }
+        //     }
+        //     // adds the points that are used by the faces
+        //     for i in 0..points.len() {
+        //         let mut found = false;
+        //         for j in 0..new_faces.len() {
+        //             if new_faces[j].contains(&i) {
+        //                 found = true;
+        //                 break;
+        //             }
+        //         }
+        //         if found {
+        //             new_points.push(points[i].clone());
+        //             new_indexes.push(i);
+        //         }
+        //     }
+        //     // 
+        //     for i in 0..new_faces.len() {
+        //         for j in 0..new_faces[i].len() {
+        //             new_faces[i][j] = new_indexes.iter().position(|&x| x == new_faces[i][j]).unwrap();
+        //         }
+        //     }
+        //     self.faces = new_faces;
+        //     self.points = new_points;
+        //     self.normals = new_normals;
+        // }

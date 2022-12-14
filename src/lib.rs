@@ -119,7 +119,7 @@ impl Shape {
                 let dx = cy * (sz * y + cz * x) - sy * z;
                 let dy = sx * (cy * z + sy * (sz * y + cz * x)) + cx * (cz * y - sz * x);
                 let dz = cx * (cy * z + sy * (sz * y + cz * x)) - sx * (cz * y - sz * x);
-                vec![ez * dx / dz + ex, ez * dy / dz + ey]
+                vec![ez * dx / dz + ex, ez * dy / dz + ey, -point[2]]
             })
             .collect::<Vec<Vec<f64>>>())
     }
@@ -135,6 +135,75 @@ impl Shape {
                     .collect::<Vec<Vec<f64>>>()
             })
             .collect::<Vec<Vec<Vec<f64>>>>())
+    }
+
+    fn get_normals(&self) -> PyResult<Vec<Vec<f64>>> {
+        fn inv_sqrt(number: f32) -> f32 {
+            let mut i: i32 = number.to_bits() as i32;
+            i = 0x5F375A86_i32.wrapping_sub(i >> 1);
+            let y = f32::from_bits(i as u32);
+            y * (1.5 - (number * 0.5 * y * y))
+        }
+        Ok(self
+            .faces
+            .par_iter()
+            .map(|face| {
+                let a = self.points[face[0]].clone();
+                let b = self.points[face[1]].clone();
+                let c = self.points[face[2]].clone();
+                let ab = vec![b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+                let ac = vec![c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+                let normal = vec![
+                    ab[1] * ac[2] - ab[2] * ac[1],
+                    ab[2] * ac[0] - ab[0] * ac[2],
+                    ab[0] * ac[1] - ab[1] * ac[0],
+                ];
+                let norm = inv_sqrt(
+                    (normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2]) as f32,
+                ) as f64;
+                vec![normal[0] * norm, normal[1] * norm, normal[2] * norm]
+            })
+            .collect::<Vec<Vec<f64>>>())
+    }
+
+    fn get_lighting(&self, light: Vec<f64>) -> PyResult<Vec<f64>> {
+        let normals = self.get_normals()?;
+        Ok(normals
+            .par_iter()
+            .map(|normal| {
+                let dot = normal[0] * light[0] + normal[1] * light[1] + normal[2] * light[2];
+                if dot < 0.0 {
+                    0.0
+                } else {
+                    dot
+                }
+            })
+            .collect::<Vec<f64>>())
+    }
+
+    fn get_culled(
+        &self,
+        focal: Vec<f64>,
+        origin: Vec<f64>,
+    ) -> PyResult<Vec<(Vec<Vec<f64>>, Vec<f64>)>> {
+        let poly = self.get_poly(focal, origin)?;
+        let normals = self.get_normals()?;
+
+        let mut culled = (0..normals.len())
+            .into_par_iter()
+            .filter(|index| normals[*index][2] < 0.0)
+            .map(|index| (poly[index].clone(), normals[index].clone()))
+            .collect::<Vec<(Vec<Vec<f64>>, Vec<f64>)>>();
+
+        culled.sort_by_cached_key(|(poly, _)| {
+            poly.iter()
+                .map(|point| point[2])
+                .sum::<f64>()
+                // .reduce(f64::max)
+                // .unwrap()
+                .round() as i64
+        });
+        Ok(culled)
     }
 }
 
