@@ -1,5 +1,5 @@
 import tkinter as tk 
-from tktp import Shape #type: ignore
+from tkrender import Shape #type: ignore
 import numpy as np
 
 
