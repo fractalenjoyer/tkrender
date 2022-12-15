@@ -35,7 +35,6 @@ def rotate(event):
 
 def move(event):
     global origin
-    print(event.keysym)
     match event.keysym:
         case "w":
             origin[1] += 1
@@ -61,7 +60,7 @@ width = height = 600
 
 root = tk.Tk()
 mouse = Mouse()
-object = Shape("./objects/bulba.obj")
+object = Shape("./objects/gun.obj")
 ctx = tk.Canvas(root, width=width, height=width, bg="#131415")
     
 ctx.bind("<B1-Motion>", rotate)
