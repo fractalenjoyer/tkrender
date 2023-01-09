@@ -10,8 +10,8 @@ name = "tkrender"
 crate-type = ["cdylib"]
 
 [dependencies]
+nalgebra = "0.31.4"
 pyo3 = { version = "0.17.3", features = ["extension-module"] }
-ndarray = "*"
 rayon = "1.6.1"
 
 [build-dependencies]
