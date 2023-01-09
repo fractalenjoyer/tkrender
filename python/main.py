@@ -8,7 +8,7 @@ except:
 
 
 DISABLE_CULLING = False
-FILENAME = "./objects/mountain.obj"
+FILENAME = "./objects/bulba.obj"
 WIREFRAME = False
 
 
