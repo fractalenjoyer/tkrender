@@ -1,18 +1,63 @@
 use pyo3::prelude::*;
 include!(concat!(env!("OUT_DIR"), "/module.rs"));
-use ndarray::arr2;
+use nalgebra::{Matrix3, Rotation3, Vector3};
 use rayon::prelude::*;
 
+
+
+struct Polygon {
+    points: Vec<Vector3<f64>>,
+    normal: Vector3<f64>,
+}
+
+impl Polygon {
+    fn new(points: Vec<Vector3<f64>>) -> Self {
+        let a: Vector3<f64> = points[0];
+        let b: Vector3<f64> = points[1];
+        let c: Vector3<f64> = points[2];
+
+        fn inv_sqrt(number: f64) -> f64 {
+            let mut i: i64 = number.to_bits() as i64;
+            i = 0x5fe6eb50c7b537a9_i64.wrapping_sub(i >> 1);
+            let y = f64::from_bits(i as u64);
+            y * (1.5 - (number * 0.5 * y * y))
+        }
+
+        // calculate surface normal of the polygon
+        // let normal: Vector3<f64> = points.iter().reduce(|a, b| &a.cross(b)).unwrap();
+        let normal: Vector3<f64> = (b - a).cross(&(c - a));
+        let norm = inv_sqrt(normal.norm_squared());
+        Self {
+            points,
+            normal: normal * norm,
+        }
+    }
+    fn transform_inplace(&mut self, matrix: Matrix3<f64>) {
+        for point in self.points.iter_mut() {
+            matrix.mul_to(&point.clone(), point);
+        }
+        matrix.mul_to(&self.normal.clone(), &mut self.normal);
+    }
+    fn transform(&self, matrix: Matrix3<f64>) -> Self {
+        let mut points = self.points.clone();
+        for point in points.iter_mut() {
+            matrix.mul_to(&point.clone(), point);
+        }
+        let mut normal = self.normal.clone();
+        matrix.mul_to(&self.normal.clone(), &mut normal);
+        Self { points, normal }
+    }
+}
+
 #[pyclass]
-struct Shape {
-    points: Vec<Vec<f64>>,
-    faces: Vec<Vec<usize>>,
+struct Mesh {
+    polygons: Vec<Polygon>,
 }
 
 #[pymethods]
-impl Shape {
+impl Mesh {
     #[new]
-    fn new(path: String) -> Self {
+    fn load(path: String) -> Self {
         let contents = std::fs::read_to_string(path).unwrap();
         let mut points = Vec::new();
         let mut faces = Vec::new();
@@ -24,7 +69,7 @@ impl Shape {
                     let x = items[0].parse::<f64>().unwrap();
                     let y = items[1].parse::<f64>().unwrap();
                     let z = items[2].parse::<f64>().unwrap();
-                    points.push(vec![x, y, z]);
+                    points.push(Vector3::new(x, y, z));
                 }
                 Some("f") => {
                     // TODO: Support more than 3 vertices per face
@@ -39,152 +84,108 @@ impl Shape {
                 _ => {}
             }
         }
-        Self { points, faces }
-    }
-
-    #[staticmethod]
-    fn load_points(points: Vec<Vec<f64>>, faces: Vec<Vec<usize>>) -> Self {
-        Self { points, faces }
-    }
-
-    fn rotate(&self, angle_x: f64, angle_y: f64, angle_z: f64) -> PyResult<Vec<Vec<f64>>> {
-        let mut rotation_matrix = arr2(&[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]);
-
-        if angle_x != 0.0 {
-            let cos_x = angle_x.cos();
-            let sin_x = angle_x.sin();
-            rotation_matrix = rotation_matrix.dot(&arr2(&[
-                [1.0, 0.0, 0.0],
-                [0.0, cos_x, -sin_x],
-                [0.0, sin_x, cos_x],
-            ]));
-        }
-        if angle_y != 0.0 {
-            let cos_y = angle_y.cos();
-            let sin_y = angle_y.sin();
-            rotation_matrix = rotation_matrix.dot(&arr2(&[
-                [cos_y, 0.0, sin_y],
-                [0.0, 1.0, 0.0],
-                [-sin_y, 0.0, cos_y],
-            ]));
-        }
-        if angle_z != 0.0 {
-            let cos_z = angle_z.cos();
-            let sin_z = angle_z.sin();
-            rotation_matrix = rotation_matrix.dot(&arr2(&[
-                [cos_z, -sin_z, 0.0],
-                [sin_z, cos_z, 0.0],
-                [0.0, 0.0, 1.0],
-            ]));
-        }
-
-        Ok(self
-            .points
-            .par_iter()
-            .map(|point_vec| {
-                rotation_matrix
-                    .dot(&arr2(&[[point_vec[0]], [point_vec[1]], [point_vec[2]]]))
-                    .into_raw_vec()
+        let polygons = faces
+            .into_par_iter()
+            .map(|face| {
+                let points = face
+                    .into_iter()
+                    .map(|index| points[index].clone())
+                    .collect();
+                Polygon::new(points)
             })
-            .collect::<Vec<Vec<f64>>>())
+            .collect();
+        Self { polygons }
     }
 
     fn rotate_in_place(&mut self, angle_x: f64, angle_y: f64, angle_z: f64) -> PyResult<()> {
-        self.points = self.rotate(angle_x, angle_y, angle_z)?;
+        let rotation = Rotation3::from_euler_angles(angle_x, angle_y, angle_z);
+        self.polygons
+            .par_iter_mut()
+            .for_each(|polygon| polygon.transform_inplace(rotation.into()));
         Ok(())
     }
 
-    fn get_view(
-        &self,
-        origin: Vec<f64>,
-        orientation: Vec<f64>,
-        focal: Vec<f64>,
-    ) -> PyResult<Vec<Vec<f64>>> {
-        let sx = orientation[0].sin();
-        let cx = orientation[0].cos();
-        let sy = orientation[1].sin();
-        let cy = orientation[1].cos();
-        let sz = orientation[2].sin();
-        let cz = orientation[2].cos();
-        let ex = focal[0];
-        let ey = focal[1];
-        let ez = focal[2];
-        Ok(self
-            .points
+    fn rotate(&self, angle_x: f64, angle_y: f64, angle_z: f64) -> PyResult<Vec<Vec<f64>>> {
+        let rotation = Rotation3::from_euler_angles(angle_x, angle_y, angle_z);
+        let polygons = self
+            .polygons
             .par_iter()
-            .map(|point| {
-                let x = point[0] - origin[0];
-                let y = point[1] - origin[1];
-                let z = point[2] - origin[2];
-                let dx = cy * (sz * y + cz * x) - sy * z;
-                let dy = sx * (cy * z + sy * (sz * y + cz * x)) + cx * (cz * y - sz * x);
-                let dz = cx * (cy * z + sy * (sz * y + cz * x)) - sx * (cz * y - sz * x);
-                vec![ez * dx / dz + ex, ez * dy / dz + ey]
-            })
-            .collect::<Vec<Vec<f64>>>())
+            .map(|polygon| polygon.transform(rotation.into()))
+            .collect::<Vec<Polygon>>();
+        let mut result = Vec::new();
+        for polygon in polygons {
+            for point in polygon.points {
+                result.push(vec![point.x, point.y, point.z]);
+            }
+        }
+        Ok(result)
     }
 
-    fn get_poly(&self, focal: Vec<f64>, origin: Vec<f64>) -> PyResult<Vec<Vec<Vec<f64>>>> {
-        let view = self.get_view(origin, vec![0.0, 0.0, 0.0], focal);
+    #[args(disable_culling = false)]
+    fn get_view(
+        &self,
+        focal: Vec<f64>,
+        origin: Vec<f64>,
+        disable_culling: bool,
+    ) -> PyResult<Vec<Vec<Vec<f64>>>> {
+        let origin = Vector3::new(origin[0], origin[1], origin[2]);
+        // let orientation = Vector3::new(orientation[0], orientation[1], orientation[2]);
+        let focal = Vector3::new(focal[0], focal[1], focal[2]);
         Ok(self
-            .faces
+            .polygons
             .par_iter()
-            .map(|face| {
-                face.par_iter()
-                    .map(|index| view.as_ref().unwrap()[*index].clone())
-                    .collect::<Vec<Vec<f64>>>()
+            .filter_map(|polygon| {
+                if polygon.normal[2] < 0.0 || disable_culling {
+                    let mut points = Vec::new();
+                    for point in &polygon.points {
+                        let mut point = point.clone();
+                        point -= &origin;
+                        point *= focal[2] / point[2];
+                        point += &focal;
+                        points.push(vec![point[0], point[1], point[2]]);
+                    }
+                    Some(points)
+                } else {
+                    None
+                }
             })
             .collect::<Vec<Vec<Vec<f64>>>>())
     }
-}
 
-#[pyclass]
-struct Engine {
-    shapes: Vec<Py<Shape>>,
-}
-
-#[pymethods]
-impl Engine {
-    #[new]
-    fn new(shapes: Vec<Py<Shape>>) -> Self {
-        Self { shapes }
-    }
-
-    fn get_view(
+    #[args(disable_culling = false)]
+    fn get_shaded(
         &self,
-        py: Python<'_>,
         focal: Vec<f64>,
         origin: Vec<f64>,
-    ) -> PyResult<Vec<Vec<f64>>> {
-        Ok(self
-            .shapes
-            .iter()
-            .map(|shape| {
-                shape
-                    .borrow(py)
-                    .get_view(origin.clone(), vec![0.0, 0.0, 0.0], focal.clone())
-                    .unwrap()
+        disable_culling: bool,
+    ) -> PyResult<Vec<(Vec<Vec<f64>>, f64)>> {
+        let origin = Vector3::new(origin[0], origin[1], origin[2]);
+        let focal = Vector3::new(focal[0], focal[1], focal[2]);
+        let mut culled = self
+            .polygons
+            .par_iter()
+            .filter_map(|polygon| {
+                if polygon.normal[2] < 0.0 || disable_culling {
+                    let mut points = Vec::new();
+                    for point in &polygon.points {
+                        let mut point_view = point.clone();
+                        point_view -= &origin;
+                        point_view *= focal[2] / point_view[2];
+                        point_view += &focal;
+                        points.push(vec![point_view[0], point_view[1], point[2]]);
+                    }
+                    Some((
+                        points,
+                        polygon.normal.dot(&Vector3::new(0.0, 0.0, 1.0)).abs(),
+                    ))
+                } else {
+                    None
+                }
             })
-            .reduce(|a, b| [a, b].concat())
-            .unwrap())
-    }
-
-    fn get_poly(
-        &self,
-        py: Python<'_>,
-        focal: Vec<f64>,
-        origin: Vec<f64>,
-    ) -> PyResult<Vec<Vec<Vec<f64>>>> {
-        Ok(self
-            .shapes
-            .iter()
-            .map(|shape| {
-                shape
-                    .borrow(py)
-                    .get_poly(focal.clone(), origin.clone())
-                    .unwrap()
-            })
-            .reduce(|a, b| [a, b].concat())
-            .unwrap())
+            .collect::<Vec<(Vec<Vec<f64>>, f64)>>();
+        culled.sort_by_cached_key(|(poly, _)| {
+            poly.iter().map(|point| -point[2]).sum::<f64>().round() as i64
+        });
+        Ok(culled)
     }
 }
