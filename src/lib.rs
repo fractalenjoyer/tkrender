@@ -3,8 +3,6 @@ include!(concat!(env!("OUT_DIR"), "/module.rs"));
 use nalgebra::{Matrix3, Rotation3, Vector3};
 use rayon::prelude::*;
 
-
-
 struct Polygon {
     points: Vec<Vector3<f64>>,
     normal: Vector3<f64>,

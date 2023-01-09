@@ -1,15 +1,16 @@
 import tkinter as tk
 import matplotlib.cm as cm
-
 try:
     from tkrender import Mesh
 except:
-    raise ImportError("tkrender not found. Please build it by running build.ps1 in the project root directory")
-    
+    raise ImportError(
+        "tkrender not found. Please build it by running build.ps1 in the project root directory")
+
 
 DISABLE_CULLING = False
 FILENAME = "./objects/mountain.obj"
 WIREFRAME = False
+
 
 class Engine:
     def __init__(self, width=1000, height=1000, background_color="#131415", cmap="inferno", wireframe=False, disable_culling=False) -> None:
@@ -20,15 +21,14 @@ class Engine:
         self.root = tk.Tk()
         self.ctx = tk.Canvas(self.root, width=width,
                              height=height, bg=background_color)
-        
-        
+
         self.focal = [0, 0, -15]
         self.origin = [0, 0, -15]
         self.range = 20
         self.x = 0
         self.y = 0
         self.meshes = []
-        
+
         self.cmap = cm.get_cmap(cmap)
         self.ctx.bind("<B1-Motion>", self.__mouse_handler)
         self.ctx.bind("<Button-1>", self.__mouse_reset)
@@ -46,15 +46,15 @@ class Engine:
                 self.__draw_wireframe(mesh)
             else:
                 self.__draw_shaded(mesh)
-    
+
     def __draw_shaded(self, mesh):
         for poly, shade in mesh.get_shaded(self.focal, self.origin, self.disable_culling):
             color = self.cmap(shade)
             polygon = [
                 *map(lambda x: self.__project(x[0], x[1]), poly)]
-            self.ctx.create_polygon(polygon, fill=format(
-                f"#{int(255*color[0]):02x}{int(255*color[1]):02x}{int(255*color[2]):02x}"), outline="")
-            
+            self.ctx.create_polygon(
+                polygon, fill=f"#{int(255*color[0]):02x}{int(255*color[1]):02x}{int(255*color[2]):02x}", outline="")
+
     def __draw_wireframe(self, mesh):
         for poly in mesh.get_view(self.focal, self.origin, self.disable_culling):
             polygon = [
@@ -93,7 +93,8 @@ class Engine:
             case "h":
                 top = tk.Toplevel()
                 top.title("Help")
-                tk.Label(top, text="WASD to move\nQ to toggle wireframe\nE to toggle backface culling\nScroll to zoom\nLeft click to rotate", font=("Helvetica 15")).pack()
+                tk.Label(top, text="WASD to move\nQ to toggle wireframe\nE to toggle backface culling\nScroll to zoom\nLeft click to rotate", font=(
+                    "Helvetica 15")).pack()
             case _:
                 return
         self.redraw()
@@ -102,10 +103,8 @@ class Engine:
         self.origin[2] += int(event.delta/120)
         self.redraw()
 
-
     def __project(self, x, y):
         return self.width*(x + self.range/2)/self.range, self.height*(y + self.range/2)/self.range
-
 
     def __mouse_update(self, event):
         delta_x = event.x - self.x
