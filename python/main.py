@@ -102,8 +102,10 @@ class Engine:
         self.origin[2] += int(event.delta/120)
         self.redraw()
 
+
     def __project(self, x, y):
         return self.width*(x + self.range/2)/self.range, self.height*(y + self.range/2)/self.range
+
 
     def __mouse_update(self, event):
         delta_x = event.x - self.x
@@ -111,6 +113,7 @@ class Engine:
         self.x = event.x
         self.y = event.y
         return delta_x, delta_y
+
 
 engine = Engine(wireframe=WIREFRAME, disable_culling=DISABLE_CULLING)
 engine.add_mesh(Mesh(FILENAME))
