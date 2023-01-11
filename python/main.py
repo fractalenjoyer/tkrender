@@ -4,7 +4,7 @@ try:
     from tkrender import Mesh
 except:
     raise ImportError(
-        "tkrender not found. Please build it by running build.ps1 in the project root directory")
+        "tkrender not found. Please build it by running build.ps1 or install.ps1 in the project root directory")
 
 
 FILENAME = "./objects/bulba.obj"
