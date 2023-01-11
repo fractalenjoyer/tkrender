@@ -39,7 +39,8 @@ class Mesh:
     :param focal: The focal point of the camera.
     :param origin: The origin of the camera.
     :param disable_culling: Whether or not to disable backface culling.
+    :param disable_occlusion: Whether or not to disable occlusion culling.
     :return: A list of tuples containing the polygons in the mesh and their respective shading.
     """
-    def get_shaded(self, focal: list[float], origin: list[float], disable_culling: bool = False) -> list[tuple[list[list[float]], float]]: ...
+    def get_shaded(self, focal: list[float], origin: list[float], disable_culling: bool = False, disable_occlusion: bool = False) -> list[tuple[list[list[float]], float]]: ...
     

@@ -7,17 +7,17 @@ except:
         "tkrender not found. Please build it by running build.ps1 in the project root directory")
 
 
-DISABLE_CULLING = False
 FILENAME = "./objects/bulba.obj"
-WIREFRAME = False
+DIM = 600
 
 
 class Engine:
-    def __init__(self, width=1000, height=1000, background_color="#131415", cmap="inferno", wireframe=False, disable_culling=False) -> None:
+    def __init__(self, width=1000, height=1000, background_color="#131415", cmap="inferno") -> None:
         self.width = width
         self.height = height
-        self.wireframe = wireframe
-        self.disable_culling = disable_culling
+        self.wireframe = False
+        self.disable_culling = False
+        self.disable_occlusion = False
         self.root = tk.Tk()
         self.ctx = tk.Canvas(self.root, width=width,
                              height=height, bg=background_color)
@@ -48,7 +48,7 @@ class Engine:
                 self.__draw_shaded(mesh)
 
     def __draw_shaded(self, mesh):
-        for poly, shade in mesh.get_shaded(self.focal, self.origin, self.disable_culling):
+        for poly, shade in mesh.get_shaded(self.focal, self.origin, self.disable_culling, self.disable_occlusion):
             color = self.cmap(shade)
             polygon = [
                 *map(lambda x: self.__project(x[0], x[1]), poly)]
@@ -90,10 +90,12 @@ class Engine:
                 self.wireframe = not self.wireframe
             case "e":
                 self.disable_culling = not self.disable_culling
+            case "f":
+                self.disable_occlusion = not self.disable_occlusion
             case "h":
                 top = tk.Toplevel()
                 top.title("Help")
-                tk.Label(top, text="WASD to move\nQ to toggle wireframe\nE to toggle backface culling\nScroll to zoom\nLeft click to rotate", font=(
+                tk.Label(top, text="WASD to move\nQ to toggle wireframe\nE to toggle backface culling\nF to toggle painter algorithm\nScroll to zoom\nLeft click to rotate", font=(
                     "Helvetica 15")).pack()
             case _:
                 return
@@ -114,6 +116,6 @@ class Engine:
         return delta_x, delta_y
 
 
-engine = Engine(wireframe=WIREFRAME, disable_culling=DISABLE_CULLING)
+engine = Engine(width=DIM, height=DIM)
 engine.add_mesh(Mesh(FILENAME))
 engine.run()

@@ -150,12 +150,13 @@ impl Mesh {
             .collect::<Vec<Vec<Vec<f64>>>>())
     }
 
-    #[args(disable_culling = false)]
+    #[args(disable_culling = false, disable_occlusion = false)]
     fn get_shaded(
         &self,
         focal: Vec<f64>,
         origin: Vec<f64>,
         disable_culling: bool,
+        disable_occlusion: bool,
     ) -> PyResult<Vec<(Vec<Vec<f64>>, f64)>> {
         let origin = Vector3::new(origin[0], origin[1], origin[2]);
         let focal = Vector3::new(focal[0], focal[1], focal[2]);
@@ -181,9 +182,12 @@ impl Mesh {
                 }
             })
             .collect::<Vec<(Vec<Vec<f64>>, f64)>>();
-        culled.sort_by_cached_key(|(poly, _)| {
-            poly.iter().map(|point| -point[2]).sum::<f64>().round() as i64
-        });
+        if !disable_occlusion {
+            culled.sort_by_cached_key(|(poly, _)| {
+                poly.iter().map(|point| -point[2]).sum::<f64>().round() as i64
+            });
+        }    
+        
         Ok(culled)
     }
 }
